@@ -3,7 +3,9 @@
 var fs = require('fs');
 var program = require('commander');
 var cheerio = require('cheerio');
+var rest = require('restler');
 var HTMLFILE_DEFAULT = "index.html";
+var URL_DEFAULT = "http://stormy-dawn-6043.herokuapp.com/";
 var CHECKSFILE_DEFAULT = "checks.json";
 
 var assertFileExists = function(infile) {
@@ -33,7 +35,23 @@ var checkHtmlFile = function(htmlfile, checksfile) {
     var present = $(checks[ii]).length > 0;
     out[checks[ii]] = present;
   }
-  return out;
+  var outJSON = JSON.stringify(out, null, 4);
+  console.log(outJSON);
+};
+
+var checkUrl = function(url, checksfile) {
+  "use strict";
+  var out = {};
+  rest.get(url).on('complete', function(data, response) {
+    var $ = cheerio.load(data);
+    var checks = loadChecks(checksfile).sort();
+    for(var ii in checks) {
+      var present = $(checks[ii]).length > 0;
+      out[checks[ii]] = present;
+    }
+    var outJSON = JSON.stringify(out, null, 4);
+    console.log(outJSON);
+  });
 };
 
 var clone = function(fn) {
@@ -45,10 +63,17 @@ if(require.main == module) {
   program
     .option('-c, --checks <check_file>', 'Path checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
     .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
+    .option('-u, --url <url>', 'univeral url location')
     .parse(process.argv);
-  var checkJson = checkHtmlFile(program.file, program.checks);
-  var outJson = JSON.stringify(checkJson, null, 4);
-  console.log(outJson);
+  if(program.url)
+  {
+    checkUrl(program.url, program.checks);
+  }
+  else
+  {
+    checkHtmlFile(program.file, program.checks);
+  }
+  
 
 } else {
   exports.checkHtmlFile = checkHtmlFile;
